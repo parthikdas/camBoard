@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CamBoard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="container">
+        <div id="board">
+            <canvas id="canvas" height="600" width="600"></canvas>
+        </div>
+
+        <label for="view">Choose your board</label>
+        <select name="view" id="view">
+            <option value="Whiteboard">Whiteboard</option>
+            <option value="CamBoard">Camboard</option>
+        </select>
+    </div>
+    <div id="controlSection">
+        <!-- slider for stroke width -->
+        <label for="strokeWidth">Stroke width : </label>
+        <input type="range" min="1" max="20" value="10" id="strokeWidth" name="strokeWidth">
+
+        <br>
+
+        <!-- colour pallete for stroke -->
+        <label for="strokeStyleColor">Stroke colour : </label>
+        <input type="color" id="strokeStyleColor" name="strokeStyleColor">
+
+        <br>
+
+        <!-- color pallete for canavs background just change the board div background color -->
+        <label for="canvasBackgroundColor">Canvas colour : </label>
+        <input type="color" id="canvasBackgroundColor" name="canvasBackgroundColor" value="#ffffff">
+
+        <br>
+
+        <!-- eraser -->
+        <label for="eraser">Erase</label>
+        <input type="checkbox" id="eraser" name="eraser">
+
+        <br>
+
+        <!-- clear whole screen button -->
+        <button id="clear">Clear</button>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
+
+<!-- Cam lagao 
+tensorflow lagao finger cordinate nao
+diye koro drawing -->
