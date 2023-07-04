@@ -24,6 +24,8 @@ body {
 #board { 
     background-color: white;
     margin: 1rem;
+    height: 600px; /* Cuz canvas and video have 600px height width */
+    width: 600px;
 }
 #controlSection {
     background-color: #2E4F4F;
@@ -39,4 +41,12 @@ button {
 }
 input { 
     margin: .5rem;
+}
+canvas {
+    position: absolute;
+    z-index: 1;
+}
+video {
+    position: absolute;
+    z-index: 0;
 }
