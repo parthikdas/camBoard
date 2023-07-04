@@ -42,11 +42,6 @@ button {
 input { 
     margin: .5rem;
 }
-canvas {
+canvas, video {
     position: absolute;
-    z-index: 1;
-}
-video {
-    position: absolute;
-    z-index: 0;
 }

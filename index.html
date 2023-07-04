@@ -9,10 +9,11 @@
 <body>
     <div id="container">
         <div id="board">
+            <video id="video" autoplay></video>
             <canvas id="canvas" height="600" width="600"></canvas>
         </div>
 
-        <label for="view">Choose your board</label>
+        <label for="view">Choose your board : &nbsp;</label>
         <select name="view" id="view">
             <option value="Whiteboard">Whiteboard</option>
             <option value="CamBoard">Camboard</option>
@@ -50,13 +51,9 @@
 </body>
 </html>
 
-<!-- Cam lagao 
+<!--
 tensorflow lagao finger cordinate nao
 diye koro drawing -->
-
-
-
-<!-- idea: put the video element beffore canvs in html itself and when stopped just remove the navigator feed and close the interval so u dont have to use css for zindex its already in place also u dont have to append the video element and remove it all times-->
 
 
 <!-- after all make 3 files 1 for normal whiteboard func 1 for cam 1 for overall-->

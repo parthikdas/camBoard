@@ -7,8 +7,7 @@ const strokeStyleColor = document.getElementById('strokeStyleColor'); // input t
 const canvasBackgroundColor = document.getElementById('canvasBackgroundColor'); // input type color 
 const eraser = document.getElementById('eraser'); // eraser checkbox
 const view = document.getElementById('view'); // select tag for normal whiteboard or camboard
-const video = document.createElement('video'); // new video element for catching cam feed
-video.autoplay = true;
+const video = document.getElementById('video'); // new video element for catching cam feed
 
 ctx.lineWidth = 10;
 ctx.linecap = 'round';
@@ -128,13 +127,9 @@ const detectFaces = async () => { // this is function is asynchronus
 // changing to camera mode
 view.addEventListener('change', () => {
     if(!camOn) { // turn cam on
-        board.appendChild(video);
         videoStream();
-        
     } else { // turn cam off
-        // goal : remove the video child from board and close that navigator feed and end the set interval from eventlistenr of model and video
-        board.removeChild(video);
-
+        // goal : close the getUserMedia cam feed and end the set interval from eventlistenr of model and video
         const stream = video.srcObject; // A video's MediaStream object is available through its srcObject attribute
         const tracks = stream.getTracks(); // Through the MediaStream, you can get the MediaStreamTracks with getTracks():
         tracks[0].stop(); // Tracks are returned as an array, so if you know you only have one, you can stop it with: 
