@@ -47,13 +47,273 @@
         <!-- clear whole screen button -->
         <button id="clear">Clear</button>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/handpose"></script>
     <script src="script.js"></script>
 </body>
 </html>
 
-<!--
-tensorflow lagao finger cordinate nao
-diye koro drawing -->
-
-
 <!-- after all make 3 files 1 for normal whiteboard func 1 for cam 1 for overall-->
+
+
+<!--
+
+
+    const board = document.getElementById('board'); // parent div for canvas and video
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const clear = document.getElementById('clear'); // clear button
+const strokeWidth = document.getElementById('strokeWidth'); // input type range
+const strokeStyleColor = document.getElementById('strokeStyleColor'); // input type color 
+const canvasBackgroundColor = document.getElementById('canvasBackgroundColor'); // input type color 
+const eraser = document.getElementById('eraser'); // eraser checkbox
+const view = document.getElementById('view'); // select tag for normal whiteboard or camboard
+const video = document.getElementById('video'); // new video element for catching cam feed
+
+ctx.lineWidth = 10;
+ctx.linecap = 'round';
+ctx.strokeStyle = '#000';
+
+let isDrawing = false;
+let lastX = 0;
+let lastY = 0;
+let isErasing = false;
+const eraserSize = 20;
+
+let eraserButtonClicked = false;
+
+let camOn = false;
+let listener; // for the detectHands func which is called evey 40 millisec
+let model; // handpose model by tensorflow
+
+// cursor is clicked on canvas
+canvas.addEventListener('mousedown', (event) => {
+    if(!eraserButtonClicked) {
+        isDrawing = true;
+        isErasing = false;
+    } else {
+        isDrawing = false;
+        isErasing = true;
+    }
+    const {offsetX, offsetY} = event;
+    lastX = offsetX;
+    lastY = offsetY;
+})
+
+// cursor is moving on canvas
+canvas.addEventListener('mousemove', (event) => {
+    const {offsetX, offsetY} = event;
+    if(isDrawing && !isErasing) {
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(offsetX, offsetY);
+        ctx.stroke();
+        // update our locations
+        lastX = offsetX;
+        lastY = offsetY;
+    } else if(!isDrawing && isErasing) {
+        ctx.clearRect(parseInt(offsetX)-eraserSize, parseInt(offsetY)-eraserSize, eraserSize, eraserSize)
+        // first 2 param is changed to make the eraser on top of cursor
+    }
+})
+
+// cursor is released from clicked state
+canvas.addEventListener('mouseup', () => {
+    isDrawing = false;
+    isErasing = false;
+})
+
+// cursor left the canvas
+canvas.addEventListener('mouseleave', () => {
+    isDrawing = false;
+    isErasing = false;
+})
+
+// clear whole screen
+clear.addEventListener('click', (event) => {
+    event.preventDefault();
+    ctx.clearRect(0, 0, canvas.clientHeight, canvas.clientWidth);
+})
+
+// changing stroke width
+strokeWidth.addEventListener('change', () => {
+    ctx.lineWidth = strokeWidth.value
+})
+
+// changing color of brush
+strokeStyleColor.addEventListener('change', () => {
+    ctx.strokeStyle = strokeStyleColor.value
+})
+
+// changing color of canvas background
+canvasBackgroundColor.addEventListener('change', () => {
+    board.style.backgroundColor = canvasBackgroundColor.value
+})
+
+// eraser button clicked
+eraser.addEventListener('click', () => {
+    eraserButtonClicked = eraserButtonClicked ? false : true;
+})
+
+const videoStream = () => {
+    navigator.mediaDevices.getUserMedia({ // getUserMedia is a API and takes an object as an argument 
+        video: {width: 600, height: 600},
+        audio: false // make it true if u also want audio
+    })
+    .then((stream) => { // and this returns a stream object which is a media stream object
+        video.srcObject = stream // video source is stream
+    })
+}
+
+const detectHands = async () => { // this is function is asynchronus
+    const prediction = await model.estimateHands(video, false) // 1st arg is input, 2nd is if we want to return tensor or not So her we dont want tensor we want actual values of coordinates
+    //  ctx.drawImage(video, 0, 0, 600, 600) dont print it to canvas
+    // a line to tell the limit
+    // ctx.beginPath();
+    // ctx.lineWidth = '2'
+    // ctx.strokeStyle = 'red'
+    // ctx.moveTo(0, 60);
+    // ctx.lineTo(150, 60);
+    // ctx.stroke();
+    // console.log(prediction['landmarks'])
+    // prediction.forEach(pred => { // pred corresponds to 1 hand
+    //    console.log(prediction.landmarks)
+    //     // if(pred.landmarks[8][1] > pred.landmarks[4][1] && pred.landmarks[8][1] > pred.landmarks[12][1] && pred.landmarks[8][1] > pred.landmarks[16][1] && pred.landmarks[8][1] > pred.landmarks[20][1]) {
+    //     //     // start draw
+    //     // }
+    //     if(parseInt(pred.landmarks[8][2]) === parseInt(pred.landmarks[4][2])) {
+    //         console.log('hi')
+    //     }
+    // })
+    prediction.forEach(pred => { // pred corresponds to 1 face
+        // plot nose point, its in landmark array
+        // ctx.fillStyle = 'yellow'
+        // ctx.fillRect(pred.landmarks[8][0], pred.landmarks[8][1], 5, 5)
+        //if(pred.landmarks[2][1] < 60) jump() // if limit touched jump
+
+
+        if(pred.landmarks[8]) {
+            isDrawing=true
+            lastX = pred.landmarks[8][0]
+            lastY = pred.landmarks[8][1]
+        }
+    })
+
+    
+}
+
+// changing to camera mode
+view.addEventListener('change', () => {
+    if(!camOn) { // turn cam on
+        videoStream();
+    } else { // turn cam off
+        // goal : close the getUserMedia cam feed and end the set interval from eventlistenr of model and video
+        clearInterval(listener);
+        const stream = video.srcObject; // A video's MediaStream object is available through its srcObject attribute
+        const tracks = stream.getTracks(); // Through the MediaStream, you can get the MediaStreamTracks with getTracks():
+        tracks[0].stop(); // Tracks are returned as an array, so if you know you only have one, you can stop it with: 
+        // tracks.forEach(track => track.stop()) // Or stop all like so:
+    }
+    camOn = view.value === 'CamBoard' ? true : false;
+})
+
+// when video data is loaded fire up the model and start the listener
+video.addEventListener('loadeddata', async () =>{ // After the data is loaded then canvas is called, else it will not show
+    model = await handpose.load()
+    listener = setInterval(detectHands, 40) // 1000/24frames = 40
+})
+
+/*
+    Te understand the co-ordinates of hand see the pic on https://github.com/tensorflow/tfjs-models/tree/master/hand-pose-detection
+    So the numbers(indexes) which we will see are the numbers of finger tips : 
+    4 : thumb finger tip
+    8 : index finger tip
+    12 : middle finger tip
+    16 : ring finger tip
+    20 : pinky finger tip
+*/
+
+/*
+
+[Log] Array (1) (script.js, line 116)
+0 Object
+
+annotations: Object
+
+indexFinger: [[223.4688586042233, 212.61371575433952, -7.137505054473877], [256.3225909762025, 142.11153687828613, -11.19483470916748], [273.9958149127247, 90.76267505948397, -14.937398910522461], [286.4970212068328, 46.1254959798697, -18.086450576782227]] (4)
+
+middleFinger: [[169.19900271073146, 194.95040381229765, -7.318049430847168], [192.1598736066121, 112.76238541126212, -11.496121406555176], [207.84388107762845, 52.411517766725, -16.81114387512207], [218.27595662264932, 7.156082124117461, -20.53110122680664]] (4)
+
+palmBase: [[106.43913383670123, 402.7902977617439, -0.0009088665246963501]] (1)
+
+pinky: [[58.33044533366913, 216.37825901708334, -13.278898239135742], [51.42046369378508, 152.77792422840557, -18.01321792602539], [49.5075439733308, 105.64789151062294, -21.187686920166016], [49.9764186363968, 61.617547117683074, -23.30341148376465]] (4)
+
+ringFinger: [[115.51304880076617, 197.13181147325582, -9.524481773376465], [126.9986512604001, 117.9404054346869, -13.990391731262207], [138.8515477435538, 59.39256307081665, -18.02753448486328], [148.37891365715558, 15.788776182592443, -20.683996200561523]] (4)
+
+thumb: [[184.91906467681278, 397.79733282939844, -11.88065242767334], [258.33079455981914, 349.3753442248492, -18.013696670532227], [315.191640754339, 302.39428831958566, -23.93886375427246], [367.4924182456018, 267.27430861321193, -29.64517593383789]] (4)
+
+Object Prototype
+
+boundingBox: {topLeft: [-117.89824679157547, -160.98845952187372], bottomRight: [534.898209010508, 491.8079962802098]}
+
+handInViewConfidence: 0.9989660978317261
+
+landmarks: [[106.43913383670123, 402.7902977617439, -0.0009088665246963501], [184.91906467681278, 397.79733282939844, -11.88065242767334], [258.33079455981914, 349.3753442248492, -18.013696670532227], [315.191640754339, 302.39428831958566, -23.93886375427246], [367.4924182456018, 267.27430861321193, -29.64517593383789], [223.4688586042233, 212.61371575433952, -7.137505054473877], [256.3225909762025, 142.11153687828613, -11.19483470916748], [273.9958149127247, 90.76267505948397, -14.937398910522461], [286.4970212068328, 46.1254959798697, -18.086450576782227], [169.19900271073146, 194.95040381229765, -7.318049430847168], …] (21)
+
+*/
+/*
+
+[Log] Array (21) (script.js, line 120)
+0 [526.6530171180577, 322.22399593725595, -0.0012617632746696472] (3)
+1 [464.890214389178, 331.8585937566602, -8.491442680358887] (3)
+2 [409.96871862362195, 305.51942743763607, -12.898971557617188] (3)
+3 [369.9767099879263, 267.8644936096796, -16.8640079498291] (3)
+4 [340.1744452215302, 237.17510712545192, -20.957616806030273] (3)
+5 [414.9229297123817, 222.16609170546883, -7.506957054138184] (3)
+6 [377.59074767804407, 167.1008617521658, -9.94023609161377] (3)
+7 [355.85869059212973, 127.27897222433934, -11.632222175598145] (3)
+8 [339.03577175398925, 94.3229673225353, -13.045589447021484] (3)
+9 [453.2274599404963, 199.02538310592823, -7.272463798522949] (3)
+10 [418.3067083635229, 134.35996896723364, -9.12356948852539] (3)
+11 [395.2703034400824, 85.87639015108472, -11.813109397888184] (3)
+12 [377.2407274400944, 48.76137700731586, -14.081238746643066] (3)
+13 [492.38853189604964, 188.8561492043969, -8.102602005004883] (3)
+14 [469.8183677210006, 126.53791536862525, -11.4065580368042] (3)
+15 [454.38297898766166, 81.32616702174931, -15.42464828491211] (3)
+16 [441.2312871428147, 47.86631713574883, -18.245723724365234] (3)
+17 [531.0414664917339, 189.2890720313466, -9.704726219177246] (3)
+18 [523.9684219149403, 138.51781980261032, -13.71508502960205] (3)
+19 [518.0209904528886, 103.30488074892037, -17.007205963134766] (3)
+20 [510.24755113469473, 72.2422632750798, -19.076364517211914] (3)
+
+Array Prototype
+*/
+
+/*
+[Log] Array (21) (script.js, line 119)
+0 [93.50210321985364, 452.291905190942, -0.00093860924243927] (3)
+1 [152.8054651741498, 436.13060805510383, -13.832710266113281] (3)
+2 [196.46562016343228, 392.0478385760424, -21.980384826660156] (3)
+3 [204.16522339271867, 350.8329984796878, -29.427629470825195] (3)
+4 [173.110599157124, 308.504637357241, -36.521671295166016] (3)
+5 [180.731858618533, 251.48059203877347, -9.282155990600586] (3)
+6 [194.0837981967499, 205.56721343624102, -20.04875946044922] (3)
+7 [177.28485361786767, 232.82350593222145, -30.61172103881836] (3)
+8 [160.58252302241394, 260.30397608071536, -36.0169563293457] (3)
+9 [134.3338464173148, 230.00249798547847, -7.956818103790283] (3)
+10 [149.849547813804, 140.77398396076552, -12.862072944641113] (3)
+11 [155.92496122059669, 73.11764076009094, -19.381343841552734] (3)
+12 [162.45658122372743, 10.90203975533143, -23.350173950195312] (3)
+13 [87.39317897637852, 234.7574563579244, -8.637805938720703] (3)
+14 [89.98682947701755, 151.5029196583282, -13.206441879272461] (3)
+15 [88.19835556405395, 82.00608954783407, -17.23137664794922] (3)
+16 [88.61203259879962, 18.17646826727372, -19.07305908203125] (3)
+17 [38.59692588538499, 265.0896811103644, -11.153047561645508] (3)
+18 [26.481829702780615, 202.12229971643222, -14.389613151550293] (3)
+19 [16.641635566910068, 152.65540228621362, -16.111337661743164] (3)
+20 [9.826036895078161, 99.57560002458466, -16.385009765625] (3)
+
+Array Prototype
+
+*/
+-->
